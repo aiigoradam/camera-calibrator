@@ -1,0 +1,35 @@
+# Upstream repository clone
+source/
+
+# Build artifacts
+build/
+dist/
+*.spec
+
+# Release packages
+*.zip
+
+# Python virtual environment
+venv/
+env/
+ENV/
+
+# Temporary build directories
+scripts/release_temp/
+release_temp/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Backup folders
+source_bak/
+

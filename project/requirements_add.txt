@@ -1,0 +1,4 @@
+# Additional dependencies for update system
+requests>=2.31.0
+packaging>=23.0
+
