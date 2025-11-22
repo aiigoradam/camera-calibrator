@@ -1,10 +1,12 @@
 @echo off
 setlocal enabledelayedexpansion
 
-REM Build from specific commit for testing or production-style release
-REM Usage: build_from_commit.cmd [commit_hash] [prod|test]
+REM Build from specific commit - FOR TESTING/DEVELOPMENT ONLY
+REM This script is used to test the update mechanism by building from older commits
+REM Usage: build_and_release_test.cmd [commit_hash] [prod|test]
 REM If no commit hash provided, defaults to 1f394db
 REM If second parameter is "prod" or "production", creates production-style release (no test markers)
+REM NOTE: For production releases, use build_and_release.cmd instead
 
 if "%~1"=="" (
     set TARGET_COMMIT=1f394db
@@ -365,4 +367,5 @@ echo   - CameraCalibrator-!NEW_VERSION!.zip (in project root)
 echo   - version.txt (updated in project root)
 echo.
 pause
+
 

@@ -37,8 +37,7 @@ def backup_config_files():
     if not internal_dir.exists():
         print("Warning: _internal directory not found")
         return None
-    
-    # Create backup directory
+
     backup_dir = Path(tempfile.gettempdir()) / "CameraCalibrator_backup"
     backup_dir.mkdir(parents=True, exist_ok=True)
     
@@ -129,10 +128,8 @@ def download_update(download_url, progress_callback=None):
         response = requests.get(download_url, stream=True, timeout=30)
         response.raise_for_status()
         
-        # Get total size
         total_size = int(response.headers.get("content-length", 0))
-        
-        # Create temp file
+
         temp_dir = Path(tempfile.gettempdir())
         temp_file = temp_dir / f"CameraCalibrator_update_{os.getpid()}.zip"
         
@@ -181,13 +178,11 @@ def apply_update(downloaded_zip_path, backup_dir=None):
     
     app_dir = get_app_directory()
     exe_path = app_dir / "CameraCalibrator.exe"
-    
-    # Extract update to temp location first
+
     temp_extract = Path(tempfile.gettempdir()) / f"CameraCalibrator_update_extract_{os.getpid()}"
     if not extract_update(downloaded_zip_path, temp_extract):
         raise RuntimeError("Failed to extract update")
-    
-    # Find the CameraCalibrator folder in extracted files
+
     extracted_camera_dir = None
     for item in temp_extract.iterdir():
         if item.is_dir() and item.name == "CameraCalibrator":
@@ -196,11 +191,9 @@ def apply_update(downloaded_zip_path, backup_dir=None):
     
     if not extracted_camera_dir:
         raise FileNotFoundError("CameraCalibrator folder not found in update package")
-    
-    # Create updater batch script
+
     updater_script = app_dir / "apply_update.bat"
-    
-    # Paths for the script (convert to strings for batch script)
+
     new_exe_str = str(extracted_camera_dir / "CameraCalibrator.exe")
     new_internal_str = str(extracted_camera_dir / "_internal")
     old_exe_str = str(exe_path)
@@ -208,8 +201,7 @@ def apply_update(downloaded_zip_path, backup_dir=None):
     app_dir_str = str(app_dir)
     temp_extract_str = str(temp_extract)
     downloaded_zip_str = str(downloaded_zip_path)
-    
-    # Write updater script
+
     script_content = r"""@echo off
 REM Camera Calibrator Update Script
 REM This script will replace the application files after it closes
@@ -227,11 +219,8 @@ if exist "{old_internal}" (
 
 REM Copy new files
 echo Installing update...
-REM Copy exe file
 copy /Y "{new_exe}" "{app_dir}\CameraCalibrator.exe" >nul
-REM Remove old _internal if it exists
 if exist "{old_internal}" rmdir /S /Q "{old_internal}" >nul 2>&1
-REM Copy new _internal folder contents (create _internal first, then copy contents)
 mkdir "{app_dir}\_internal" >nul 2>&1
 xcopy /E /Y "{new_internal}\*" "{app_dir}\_internal\" >nul
 """.format(
@@ -259,19 +248,17 @@ if exist "{backup_path}\calibration_files" (
         )
     
     script_content += r"""
-REM Launch updated application FIRST (before cleanup)
+REM Launch updated application
 echo Starting updated application...
-REM Verify exe exists before launching
 if exist "{app_dir}\CameraCalibrator.exe" (
     start "" "{app_dir}\CameraCalibrator.exe"
-    REM Wait a moment for app to start
     timeout /t 2 /nobreak >nul
 ) else (
     echo ERROR: CameraCalibrator.exe not found after update!
     pause
 )
 
-REM Clean up (after app has started)
+REM Clean up
 del /F /Q "{old_exe}.old" >nul 2>&1
 rmdir /S /Q "{old_internal}.old" >nul 2>&1
 rmdir /S /Q "{temp_extract}" >nul 2>&1
@@ -286,11 +273,10 @@ del /F /Q "%~f0" >nul 2>&1
     )
     
     updater_script.write_text(script_content)
-    
-    # Launch updater script (will run after this process exits)
+
     subprocess.Popen(
         [str(updater_script)], shell=True, creationflags=subprocess.CREATE_NEW_CONSOLE if sys.platform == "win32" else 0
     )
-    
+
     print("Update script created. Application will restart after closing.")
     return True

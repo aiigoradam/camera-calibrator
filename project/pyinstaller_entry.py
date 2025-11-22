@@ -13,12 +13,7 @@ from typing import Optional
 
 def _import_update_modules():
     """
-    Import update modules lazily so the main app can still launch if any
-    dependency is missing. Returns a tuple with callables or None.
-
-    Returns:
-        tuple: (check_for_updates, UpdateDialog, download_update, apply_update, backup_config_files)
-               or None if imports fail
+    Import update modules lazily. Returns tuple of callables or None if imports fail.
     """
     try:
         from update_checker import check_for_updates
@@ -27,14 +22,11 @@ def _import_update_modules():
 
         return check_for_updates, UpdateDialog, download_update, apply_update, backup_config_files
     except (ImportError, ModuleNotFoundError) as exc:
-        # Module or dependency not found
         print(f"[Updater] Disabled (missing dependency): {exc}")
     except AttributeError as exc:
-        # Module imported but missing expected attributes/functions
         print(f"[Updater] Disabled (module missing expected attributes): {exc}")
         traceback.print_exc()
     except SyntaxError as exc:
-        # Module has syntax errors (shouldn't happen in production, but defensive)
         print(f"[Updater] Disabled (syntax error in module): {exc}")
         traceback.print_exc()
 
@@ -42,15 +34,10 @@ def _import_update_modules():
 
 
 def _should_run_update_check() -> bool:
-    """
-    Determine if the update check should run.
-    Prevents duplicates in Flask reloader processes and repeated checks.
-    """
-    # 1. Skip if Flask reloader child process (WERKZEUG_RUN_MAIN=true)
+    """Determine if the update check should run. Prevents duplicates in Flask reloader processes."""
     if os.environ.get("WERKZEUG_RUN_MAIN", "").lower() == "true":
         return False
 
-    # 2. Skip if update check already completed (persists across reloader processes)
     if os.environ.get("CAMERA_CALIBRATOR_UPDATE_CHECKED", "").lower() == "true":
         return False
 
@@ -64,7 +51,6 @@ def handle_updates():
     if not _should_run_update_check():
         return
 
-    # Mark that update check has been done (persists across reloader processes)
     os.environ["CAMERA_CALIBRATOR_UPDATE_CHECKED"] = "true"
 
     try:
@@ -81,7 +67,6 @@ def handle_updates():
         dialog = UpdateDialog(update_info)
         result = dialog.show() or {}
         if result.get("choice") != "accept":
-            # User skipped the update; continue launching the app
             return
 
         backup_dir: Optional[str] = None
@@ -105,27 +90,22 @@ def handle_updates():
             sys.exit(0)
 
     except (RuntimeError, OSError, ImportError, FileNotFoundError, LookupError, ValueError) as exc:
-        # Catch specific errors that might occur during update process
-        # Includes: runtime, file I/O, import, file not found, lookup, and value errors
         print(f"[Updater] Error while handling updates: {exc}")
         traceback.print_exc()
 
 
 def launch_app():
-    """Launch the upstream Flask application exactly as `python app.py` would."""
-    # Disable Flask reloader in PyInstaller build to prevent duplicate update checks
+    """Launch the upstream Flask application."""
     os.environ["FLASK_ENV"] = "production"
     os.environ["FLASK_DEBUG"] = "0"
 
     try:
         runpy.run_module("app", run_name="__main__")
     except (ImportError, ModuleNotFoundError, SyntaxError) as exc:
-        # Catch module loading errors specifically
         print(f"[Launcher] Fatal error while starting application: {exc}")
         traceback.print_exc()
         raise
     except Exception as exc:
-        # Catch-all for unexpected runtime errors before re-raising
         print(f"[Launcher] Fatal error while starting application: {exc}")
         traceback.print_exc()
         raise

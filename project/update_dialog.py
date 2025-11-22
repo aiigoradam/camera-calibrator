@@ -12,38 +12,32 @@ class UpdateDialog:
     def __init__(self, update_info):
         self.update_info = update_info
         self.user_choice = None
-        self.backup_configs = True  # Default: backup enabled
-        self._closed = False  # Flag to prevent multiple closes
+        self.backup_configs = True
+        self._closed = False
 
         self.root = tk.Tk()
         self.root.title("Update Available")
         self.root.geometry("550x450")
         self.root.resizable(False, False)
 
-        # Center window
         self.root.update_idletasks()
         x = (self.root.winfo_screenwidth() // 2) - (550 // 2)
         y = (self.root.winfo_screenheight() // 2) - (450 // 2)
         self.root.geometry(f"550x450+{x}+{y}")
 
-        # Make window stay on top
         self.root.attributes("-topmost", True)
         self.root.focus_force()
 
         self._create_widgets()
-
-        # Handle window close
         self.root.protocol("WM_DELETE_WINDOW", self._on_reject)
 
     def _create_widgets(self):
-        # Title
         title_frame = tk.Frame(self.root)
         title_frame.pack(fill=tk.X, padx=10, pady=10)
 
         title_label = tk.Label(title_frame, text="Update Available", font=("Arial", 16, "bold"))
         title_label.pack()
 
-        # Version info
         version_frame = tk.Frame(self.root)
         version_frame.pack(fill=tk.X, padx=10, pady=5)
 
@@ -60,11 +54,10 @@ class UpdateDialog:
         )
         latest_label.pack(side=tk.LEFT, padx=20)
 
-        # Backup option checkbox
         backup_frame = tk.Frame(self.root)
         backup_frame.pack(fill=tk.X, padx=10, pady=5)
 
-        self.backup_var = tk.BooleanVar(value=True)  # Default: checked
+        self.backup_var = tk.BooleanVar(value=True)
         backup_checkbox = tk.Checkbutton(
             backup_frame,
             text="Backup configuration files before update",
@@ -74,24 +67,17 @@ class UpdateDialog:
         )
         backup_checkbox.pack(side=tk.LEFT)
 
-        # Info label about backup
-        backup_info = tk.Label(backup_frame, text="(config.yaml, calibration_files)", font=("Arial", 8), fg="gray")
-        backup_info.pack(side=tk.LEFT, padx=5)
-
-        # Release notes
         notes_label = tk.Label(self.root, text="Release Notes:", font=("Arial", 10, "bold"))
         notes_label.pack(anchor=tk.W, padx=10, pady=(10, 5))
 
         notes_text = scrolledtext.ScrolledText(self.root, height=12, wrap=tk.WORD, state=tk.DISABLED)
         notes_text.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
 
-        # Set release notes
         notes_text.config(state=tk.NORMAL)
         notes = self.update_info.get("release_notes", "No release notes available.")
         notes_text.insert("1.0", notes)
         notes_text.config(state=tk.DISABLED)
 
-        # Buttons
         button_frame = tk.Frame(self.root)
         button_frame.pack(fill=tk.X, padx=10, pady=10)
 
@@ -116,27 +102,24 @@ class UpdateDialog:
     def _on_accept(self):
         """User accepted the update."""
         if self._closed:
-            return  # Prevent multiple calls
+            return
         self._closed = True
         self.user_choice = "accept"
         self.backup_configs = self.backup_var.get()
-        # Destroy immediately - this will stop mainloop automatically
         self.root.quit()
         self.root.destroy()
 
     def _on_reject(self):
         """User rejected the update."""
         if self._closed:
-            return  # Prevent multiple calls
+            return
         self._closed = True
         self.user_choice = "reject"
         self.backup_configs = self.backup_var.get()
-        # Destroy immediately - this will stop mainloop automatically
         self.root.quit()
         self.root.destroy()
 
     def show(self):
         """Show dialog and return user choice and backup preference."""
         self.root.mainloop()
-        # mainloop() exits when window is destroyed, so no need to check/destroy again
         return {"choice": self.user_choice, "backup_configs": self.backup_configs}
