@@ -26,7 +26,7 @@ def increment_version(version_str):
             if minor > 9:
                 minor = 0
                 major += 1
-        
+                    
         return f"{major}.{minor}.{patch}"
     except (ValueError, IndexError) as e:
         print(f"Error: Invalid version format '{version_str}': {e}", file=sys.stderr)

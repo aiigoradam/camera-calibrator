@@ -1,9 +1,10 @@
 @echo off
 setlocal enabledelayedexpansion
 
-REM Build from specific commit for testing
-REM Usage: build_from_commit.cmd [commit_hash]
+REM Build from specific commit for testing or production-style release
+REM Usage: build_from_commit.cmd [commit_hash] [prod|test]
 REM If no commit hash provided, defaults to 1f394db
+REM If second parameter is "prod" or "production", creates production-style release (no test markers)
 
 if "%~1"=="" (
     set TARGET_COMMIT=1f394db
@@ -12,15 +13,25 @@ if "%~1"=="" (
     set TARGET_COMMIT=%~1
 )
 
+REM Check for production mode
+set PRODUCTION_MODE=0
+if /i "%~2"=="prod" set PRODUCTION_MODE=1
+if /i "%~2"=="production" set PRODUCTION_MODE=1
+
 echo ========================================
 echo Camera Calibrator - Build from Old Commit
 echo ========================================
 echo.
 echo Building from commit: %TARGET_COMMIT%
+if !PRODUCTION_MODE!==1 (
+    echo Mode: PRODUCTION (no test markers)
+) else (
+    echo Mode: TEST (with test markers)
+)
 echo.
 
 REM Step 1: Fetch and checkout specific commit
-echo [1/6] Fetching and checking out commit %TARGET_COMMIT%...
+echo [1/7] Fetching and checking out commit %TARGET_COMMIT%...
 REM Change to project root (parent of scripts folder)
 cd /d "%~dp0\.."
 if not exist "source" (
@@ -64,7 +75,7 @@ echo [OK] Checked out commit %TARGET_COMMIT%
 echo.
 
 REM Step 2: Copy project files into source and merge requirements
-echo [2/6] Copying project files into source...
+echo [2/7] Copying project files into source...
 REM Ensure we're in project root
 cd /d "%~dp0\.."
 
@@ -86,7 +97,7 @@ echo [OK] Project files copied and requirements merged
 echo.
 
 REM Step 3: Update version with commit hash
-echo [3/6] Updating version...
+echo [3/7] Updating version...
 REM Ensure we're in project root
 cd /d "%~dp0\.."
 cd source
@@ -117,7 +128,7 @@ cd ..
 echo.
 
 REM Step 4: Build executable
-echo [4/6] Building executable...
+echo [4/7] Building executable...
 REM Ensure we're in project root
 cd /d "%~dp0\.."
 cd source
@@ -139,7 +150,7 @@ cd ..
 echo.
 
 REM Step 5: Package for release
-echo [5/6] Packaging release...
+echo [5/7] Packaging release...
 REM Ensure we're in project root
 cd /d "%~dp0\.."
 REM Use temporary directory in scripts folder, not root
@@ -159,7 +170,11 @@ cd ..
 
 REM Use version from earlier step
 set RELEASE_TAG=v!NEW_VERSION!
-set RELEASE_TITLE=Version !NEW_VERSION_BASE! (!COMMIT_HASH!) - Test Build
+if !PRODUCTION_MODE!==1 (
+    set RELEASE_TITLE=Version !NEW_VERSION_BASE! (!COMMIT_HASH!)
+) else (
+    set RELEASE_TITLE=Version !NEW_VERSION_BASE! (!COMMIT_HASH!) - Test Build
+)
 
 echo Version: !NEW_VERSION!
 echo Release tag: !RELEASE_TAG!
@@ -184,24 +199,48 @@ echo Short Hash: !COMMIT_HASH! >> "%RELEASE_DIR%\version_info.txt"
 echo Build Date: %DATE% %TIME% >> "%RELEASE_DIR%\version_info.txt"
 echo Commit Date: !COMMIT_DATE! >> "%RELEASE_DIR%\version_info.txt"
 echo Source Repository: https://github.com/Orkules/camera_calibrator >> "%RELEASE_DIR%\version_info.txt"
-echo NOTE: This is a test build from old commit >> "%RELEASE_DIR%\version_info.txt"
+if !PRODUCTION_MODE!==0 (
+    echo NOTE: This is a test build from old commit >> "%RELEASE_DIR%\version_info.txt"
+)
 
 REM Create release notes file
 echo Creating release notes...
-echo Test build from old commit %TARGET_COMMIT% > "%RELEASE_DIR%\release_notes.txt"
-echo. >> "%RELEASE_DIR%\release_notes.txt"
-echo Build Date: %DATE% %TIME% >> "%RELEASE_DIR%\release_notes.txt"
-echo Commit Date: !COMMIT_DATE! >> "%RELEASE_DIR%\release_notes.txt"
-echo. >> "%RELEASE_DIR%\release_notes.txt"
-echo Source Repository: https://github.com/Orkules/camera_calibrator >> "%RELEASE_DIR%\release_notes.txt"
-echo Source Commit: !COMMIT_FULL! >> "%RELEASE_DIR%\release_notes.txt"
-echo. >> "%RELEASE_DIR%\release_notes.txt"
-echo NOTE: This is a test build for testing the auto-update mechanism. >> "%RELEASE_DIR%\release_notes.txt"
-echo. >> "%RELEASE_DIR%\release_notes.txt"
-echo Installation: >> "%RELEASE_DIR%\release_notes.txt"
-echo 1. Download CameraCalibrator.zip >> "%RELEASE_DIR%\release_notes.txt"
-echo 2. Extract to desired location >> "%RELEASE_DIR%\release_notes.txt"
-echo 3. Run CameraCalibrator.exe >> "%RELEASE_DIR%\release_notes.txt"
+if !PRODUCTION_MODE!==1 (
+    REM Production-style release notes (same as build_and_release.cmd)
+    echo Automated build from upstream commit !COMMIT_FULL! > "%RELEASE_DIR%\release_notes.txt"
+    echo. >> "%RELEASE_DIR%\release_notes.txt"
+    echo Build Date: %DATE% %TIME% >> "%RELEASE_DIR%\release_notes.txt"
+    echo Commit Date: !COMMIT_DATE! >> "%RELEASE_DIR%\release_notes.txt"
+    echo. >> "%RELEASE_DIR%\release_notes.txt"
+    echo Source Repository: https://github.com/Orkules/camera_calibrator >> "%RELEASE_DIR%\release_notes.txt"
+    echo Source Commit: !COMMIT_FULL! >> "%RELEASE_DIR%\release_notes.txt"
+    echo. >> "%RELEASE_DIR%\release_notes.txt"
+    echo Installation: >> "%RELEASE_DIR%\release_notes.txt"
+    echo 1. Download CameraCalibrator.zip >> "%RELEASE_DIR%\release_notes.txt"
+    echo 2. Extract to desired location >> "%RELEASE_DIR%\release_notes.txt"
+    echo 3. Run CameraCalibrator.exe >> "%RELEASE_DIR%\release_notes.txt"
+    echo. >> "%RELEASE_DIR%\release_notes.txt"
+    echo Update Instructions: >> "%RELEASE_DIR%\release_notes.txt"
+    echo - Backup your _internal/config.yaml and _internal/calibration_files/ if you've made custom changes >> "%RELEASE_DIR%\release_notes.txt"
+    echo - Replace the entire CameraCalibrator folder with the new version >> "%RELEASE_DIR%\release_notes.txt"
+    echo - Restore your backed-up config files >> "%RELEASE_DIR%\release_notes.txt"
+) else (
+    REM Test build release notes
+    echo Test build from old commit %TARGET_COMMIT% > "%RELEASE_DIR%\release_notes.txt"
+    echo. >> "%RELEASE_DIR%\release_notes.txt"
+    echo Build Date: %DATE% %TIME% >> "%RELEASE_DIR%\release_notes.txt"
+    echo Commit Date: !COMMIT_DATE! >> "%RELEASE_DIR%\release_notes.txt"
+    echo. >> "%RELEASE_DIR%\release_notes.txt"
+    echo Source Repository: https://github.com/Orkules/camera_calibrator >> "%RELEASE_DIR%\release_notes.txt"
+    echo Source Commit: !COMMIT_FULL! >> "%RELEASE_DIR%\release_notes.txt"
+    echo. >> "%RELEASE_DIR%\release_notes.txt"
+    echo NOTE: This is a test build for testing the auto-update mechanism. >> "%RELEASE_DIR%\release_notes.txt"
+    echo. >> "%RELEASE_DIR%\release_notes.txt"
+    echo Installation: >> "%RELEASE_DIR%\release_notes.txt"
+    echo 1. Download CameraCalibrator.zip >> "%RELEASE_DIR%\release_notes.txt"
+    echo 2. Extract to desired location >> "%RELEASE_DIR%\release_notes.txt"
+    echo 3. Run CameraCalibrator.exe >> "%RELEASE_DIR%\release_notes.txt"
+)
 
 REM Create zip in project root (this is the only file that should be in root)
 echo Creating release package...
@@ -223,8 +262,30 @@ cd ..\..
 echo [OK] Package created: CameraCalibrator-!NEW_VERSION!.zip
 echo.
 
-REM Step 6: Create GitHub release
-echo [6/6] Creating GitHub release...
+REM Step 6: Check for existing release
+echo [6/7] Checking for existing release...
+gh release view !RELEASE_TAG! --repo aiigoradam/camera-calibrator >nul 2>&1
+if %ERRORLEVEL% == 0 (
+    echo WARNING: Release !RELEASE_TAG! already exists!
+    echo Deleting existing release and tag...
+    gh release delete !RELEASE_TAG! --repo aiigoradam/camera-calibrator --yes
+    if errorlevel 1 (
+        echo ERROR: Failed to delete existing release
+        pause
+        exit /b 1
+    )
+    git push origin --delete !RELEASE_TAG! >nul 2>&1
+    if errorlevel 1 (
+        echo WARNING: Tag !RELEASE_TAG! may not exist remotely, continuing...
+    )
+    echo [OK] Existing release and tag deleted
+) else (
+    echo [OK] No existing release found
+)
+echo.
+
+REM Step 7: Create GitHub release
+echo [7/7] Creating GitHub release...
 echo.
 echo Release details:
 echo   Tag: !RELEASE_TAG!

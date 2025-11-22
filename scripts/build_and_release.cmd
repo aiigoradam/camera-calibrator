@@ -7,7 +7,7 @@ echo ========================================
 echo.
 
 REM Step 1: Fetch latest from upstream
-echo [1/7] Fetching latest from upstream...
+echo [1/6] Fetching latest from upstream...
 REM Change to project root (parent of scripts folder)
 cd /d "%~dp0\.."
 if not exist "source" (
@@ -41,7 +41,7 @@ echo [OK] Upstream code updated
 echo.
 
 REM Step 2: Copy project files into source and merge requirements
-echo [2/7] Copying project files into source...
+echo [2/6] Copying project files into source...
 REM Ensure we're in project root
 cd /d "%~dp0\.."
 
@@ -63,7 +63,7 @@ echo [OK] Project files copied and requirements merged
 echo.
 
 REM Step 3: Update version with commit hash
-echo [3/7] Updating version...
+echo [3/6] Updating version...
 REM Ensure we're in project root
 cd /d "%~dp0\.."
 cd source
@@ -94,7 +94,7 @@ cd ..
 echo.
 
 REM Step 4: Build executable
-echo [4/7] Building executable...
+echo [4/6] Building executable...
 REM Ensure we're in project root
 cd /d "%~dp0\.."
 cd source
@@ -116,7 +116,7 @@ cd ..
 echo.
 
 REM Step 5: Package for release
-echo [5/7] Packaging release...
+echo [5/6] Packaging release...
 REM Ensure we're in project root
 cd /d "%~dp0\.."
 REM Use temporary directory in scripts folder, not root
@@ -202,48 +202,8 @@ cd ..\..
 echo [OK] Package created: CameraCalibrator-!NEW_VERSION!.zip
 echo.
 
-REM Step 6: Check for existing release
-echo [6/7] Checking for existing release...
-gh release view !RELEASE_TAG! --repo aiigoradam/camera-calibrator >nul 2>&1
-if %ERRORLEVEL% == 0 (
-    echo.
-    echo WARNING: Release !RELEASE_TAG! already exists!
-    echo.
-    echo Options:
-    echo   1. Delete existing release and create new one
-    echo   2. Skip release creation (keep existing)
-    echo   3. Cancel
-    echo.
-    set /p choice="Enter choice (1/2/3): "
-    if "!choice!"=="1" (
-        echo Deleting existing release...
-        gh release delete !RELEASE_TAG! --repo aiigoradam/camera-calibrator --yes
-        if errorlevel 1 (
-            echo ERROR: Failed to delete existing release
-            pause
-            exit /b 1
-        )
-        echo [OK] Existing release deleted
-    ) else if "!choice!"=="2" (
-        echo Skipping release creation.
-        pause
-        exit /b 0
-    ) else if "!choice!"=="3" (
-        echo Cancelled.
-        pause
-        exit /b 0
-    ) else (
-        echo Skipping release creation.
-        pause
-        exit /b 0
-    )
-) else (
-    echo [OK] No existing release found
-)
-echo.
-
-REM Step 7: Create GitHub release
-echo [7/7] Creating GitHub release...
+REM Step 6: Create GitHub release
+echo [6/6] Creating GitHub release...
 echo.
 echo Release details:
 echo   Tag: !RELEASE_TAG!
