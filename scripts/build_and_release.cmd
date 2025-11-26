@@ -147,14 +147,15 @@ if errorlevel 1 (
 )
 
 echo Creating release notes...
+for /f "tokens=*" %%i in ('powershell -Command "Get-Date -Format \"yyyy-MM-dd HH:mm:ss zzz\""') do set "BUILD_DATE=%%i"
 echo !COMMIT_MESSAGE! > "%RELEASE_DIR%\release_notes.txt"
 echo. >> "%RELEASE_DIR%\release_notes.txt"
 echo Author: !COMMIT_AUTHOR! >> "%RELEASE_DIR%\release_notes.txt"
-echo Date: !COMMIT_DATE! >> "%RELEASE_DIR%\release_notes.txt"
 echo Hash: !COMMIT_HASH! >> "%RELEASE_DIR%\release_notes.txt"
+echo Commit Date: !COMMIT_DATE! >> "%RELEASE_DIR%\release_notes.txt"
+echo Source Repo: https://github.com/Orkules/camera_calibrator >> "%RELEASE_DIR%\release_notes.txt"
 echo. >> "%RELEASE_DIR%\release_notes.txt"
-echo Source Repository: https://github.com/Orkules/camera_calibrator >> "%RELEASE_DIR%\release_notes.txt"
-echo Build Date: %DATE% %TIME% >> "%RELEASE_DIR%\release_notes.txt"
+echo Build Date: !BUILD_DATE! >> "%RELEASE_DIR%\release_notes.txt"
 
 echo Creating release package...
 cd "%RELEASE_DIR%"
