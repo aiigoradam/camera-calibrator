@@ -1,12 +1,8 @@
 #!/usr/bin/env python3
-"""
-Update handler that orchestrates the update process.
-Handles config backup/restore and update installation.
-"""
+"""Update handler that orchestrates downloading and installing updates."""
 
 import sys
 import os
-import shutil
 import subprocess
 import tempfile
 import zipfile
@@ -28,97 +24,6 @@ def get_internal_directory():
     return app_dir / "_internal"
 
 
-def backup_config_files():
-    """
-    Backup user-editable configuration files.
-    Returns path to backup directory, or None if failed.
-    """
-    internal_dir = get_internal_directory()
-    if not internal_dir.exists():
-        print("Warning: _internal directory not found")
-        return None
-
-    backup_dir = Path(tempfile.gettempdir()) / "CameraCalibrator_backup"
-    backup_dir.mkdir(parents=True, exist_ok=True)
-    
-    files_to_backup = [
-        ("config.yaml", "config.yaml"),
-        ("calibration_files", "calibration_files"),
-    ]
-    
-    backed_up = []
-    for source_name, dest_name in files_to_backup:
-        source_path = internal_dir / source_name
-        dest_path = backup_dir / dest_name
-        
-        if source_path.exists():
-            try:
-                if source_path.is_file():
-                    shutil.copy2(source_path, dest_path)
-                elif source_path.is_dir():
-                    if dest_path.exists():
-                        shutil.rmtree(dest_path)
-                    shutil.copytree(source_path, dest_path)
-                backed_up.append(source_name)
-                print(f"Backed up: {source_name}")
-            except OSError as e:
-                print(f"Error backing up {source_name}: {e}")
-                return None
-    
-    if backed_up:
-        print(f"Backup created at: {backup_dir}")
-        return backup_dir
-    else:
-        print("No files to backup")
-        return None
-
-
-def restore_config_files(backup_dir):
-    """
-    Restore configuration files from backup.
-    """
-    if not backup_dir or not Path(backup_dir).exists():
-        print("No backup directory to restore from")
-        return False
-    
-    internal_dir = get_internal_directory()
-    if not internal_dir.exists():
-        print("Error: _internal directory not found for restore")
-        return False
-    
-    backup_path = Path(backup_dir)
-    files_to_restore = [
-        ("config.yaml", "config.yaml"),
-        ("calibration_files", "calibration_files"),
-    ]
-    
-    restored = []
-    for backup_name, dest_name in files_to_restore:
-        backup_file = backup_path / backup_name
-        dest_path = internal_dir / dest_name
-        
-        if backup_file.exists():
-            try:
-                if backup_file.is_file():
-                    shutil.copy2(backup_file, dest_path)
-                elif backup_file.is_dir():
-                    if dest_path.exists():
-                        shutil.rmtree(dest_path)
-                    shutil.copytree(backup_file, dest_path)
-                restored.append(dest_name)
-                print(f"Restored: {dest_name}")
-            except OSError as e:
-                print(f"Error restoring {dest_name}: {e}")
-                return False
-    
-    if restored:
-        print(f"Successfully restored {len(restored)} file(s)")
-        return True
-    else:
-        print("No files restored")
-        return False
-
-
 def download_update(download_url, progress_callback=None):
     """
     Download update zip file.
@@ -129,7 +34,7 @@ def download_update(download_url, progress_callback=None):
         response.raise_for_status()
         
         total_size = int(response.headers.get("content-length", 0))
-
+        
         temp_dir = Path(tempfile.gettempdir())
         temp_file = temp_dir / f"CameraCalibrator_update_{os.getpid()}.zip"
         
@@ -168,7 +73,7 @@ def extract_update(zip_path, extract_to):
         return False
 
 
-def apply_update(downloaded_zip_path, backup_dir=None):
+def apply_update(downloaded_zip_path):
     """
     Apply update by replacing current executable and _internal folder.
     Creates a batch script to handle the replacement after app closes.
@@ -178,11 +83,11 @@ def apply_update(downloaded_zip_path, backup_dir=None):
     
     app_dir = get_app_directory()
     exe_path = app_dir / "CameraCalibrator.exe"
-
+    
     temp_extract = Path(tempfile.gettempdir()) / f"CameraCalibrator_update_extract_{os.getpid()}"
     if not extract_update(downloaded_zip_path, temp_extract):
         raise RuntimeError("Failed to extract update")
-
+    
     extracted_camera_dir = None
     for item in temp_extract.iterdir():
         if item.is_dir() and item.name == "CameraCalibrator":
@@ -191,9 +96,9 @@ def apply_update(downloaded_zip_path, backup_dir=None):
     
     if not extracted_camera_dir:
         raise FileNotFoundError("CameraCalibrator folder not found in update package")
-
+    
     updater_script = app_dir / "apply_update.bat"
-
+    
     new_exe_str = str(extracted_camera_dir / "CameraCalibrator.exe")
     new_internal_str = str(extracted_camera_dir / "_internal")
     old_exe_str = str(exe_path)
@@ -201,7 +106,7 @@ def apply_update(downloaded_zip_path, backup_dir=None):
     app_dir_str = str(app_dir)
     temp_extract_str = str(temp_extract)
     downloaded_zip_str = str(downloaded_zip_path)
-
+    
     script_content = r"""@echo off
 REM Camera Calibrator Update Script
 REM This script will replace the application files after it closes
@@ -231,22 +136,6 @@ xcopy /E /Y "{new_internal}\*" "{app_dir}\_internal\" >nul
         app_dir=app_dir_str,
     )
     
-    if backup_dir:
-        backup_path_str = str(Path(backup_dir))
-        script_content += r"""
-REM Restore config files if backup exists
-if exist "{backup_path}\config.yaml" (
-    copy /Y "{backup_path}\config.yaml" "{old_internal}\config.yaml" >nul 2>&1
-    echo Restored config.yaml
-)
-if exist "{backup_path}\calibration_files" (
-    xcopy /E /I /Y "{backup_path}\calibration_files" "{old_internal}\calibration_files\" >nul 2>&1
-    echo Restored calibration_files
-)
-""".format(
-            backup_path=backup_path_str, old_internal=old_internal_str
-        )
-    
     script_content += r"""
 REM Launch updated application
 echo Starting updated application...
@@ -273,10 +162,10 @@ del /F /Q "%~f0" >nul 2>&1
     )
     
     updater_script.write_text(script_content)
-
+    
     subprocess.Popen(
         [str(updater_script)], shell=True, creationflags=subprocess.CREATE_NEW_CONSOLE if sys.platform == "win32" else 0
     )
-
+    
     print("Update script created. Application will restart after closing.")
     return True

@@ -71,6 +71,7 @@ if exist "..\version.txt" (
 )
 
 for /f "tokens=1 delims=-" %%i in ("%CURRENT_VERSION%") do set VERSION_BASE=%%i
+set PREV_VERSION=!CURRENT_VERSION!
 
 for /f "tokens=*" %%i in ('python "%~dp0increment_version.py" "%VERSION_BASE%"') do set NEW_VERSION_BASE=%%i
 
@@ -90,12 +91,14 @@ call build_windows.cmd
 if errorlevel 1 (
     echo ERROR: Build failed!
     cd ..
+    call :restore_version
     pause
     exit /b 1
 )
 if not exist "dist\CameraCalibrator\CameraCalibrator.exe" (
     echo ERROR: Build failed - executable not found!
     cd ..
+    call :restore_version
     pause
     exit /b 1
 )
@@ -138,6 +141,7 @@ echo Copying built files...
 xcopy /E /I /Y "source\dist\CameraCalibrator\*" "%RELEASE_DIR%\CameraCalibrator\" >nul
 if errorlevel 1 (
     echo ERROR: Failed to copy built files
+    call :restore_version
     pause
     exit /b 1
 )
@@ -159,10 +163,13 @@ if exist "%ZIP_NAME%" (
     echo Removing existing zip file...
     del /F /Q "%ZIP_NAME%"
 )
+echo Waiting for build artifacts to unlock...
+timeout /t 3 /nobreak >nul
 powershell -Command "Compress-Archive -Path * -DestinationPath '%ZIP_NAME%' -Force"
 if errorlevel 1 (
     echo ERROR: Failed to create zip file
     cd ..\..
+    call :restore_version
     pause
     exit /b 1
 )
@@ -213,6 +220,7 @@ if %ERRORLEVEL% == 0 (
     echo   3. Network issues
     echo      Check internet connection
     echo.
+    call :restore_version
     pause
     exit /b 1
 )
@@ -240,4 +248,17 @@ echo   - CameraCalibrator-!NEW_VERSION!.zip (in project root)
 echo   - version.txt (updated in project root)
 echo.
 pause
+
+goto :eof
+
+:restore_version
+if not defined PREV_VERSION goto :eof
+pushd "%~dp0\.."
+echo !PREV_VERSION!>version.txt
+if exist "source\version.txt" (
+    echo !PREV_VERSION!>"source\version.txt"
+)
+popd
+echo [INFO] Version reverted to !PREV_VERSION! due to failure.
+goto :eof
 

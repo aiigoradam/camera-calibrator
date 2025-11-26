@@ -8,7 +8,6 @@ import os
 import runpy
 import sys
 import traceback
-from typing import Optional
 
 
 def _import_update_modules():
@@ -18,9 +17,9 @@ def _import_update_modules():
     try:
         from update_checker import check_for_updates
         from update_dialog import UpdateDialog
-        from update_handler import download_update, apply_update, backup_config_files
+        from update_handler import download_update, apply_update
 
-        return check_for_updates, UpdateDialog, download_update, apply_update, backup_config_files
+        return check_for_updates, UpdateDialog, download_update, apply_update
     except (ImportError, ModuleNotFoundError) as exc:
         print(f"[Updater] Disabled (missing dependency): {exc}")
     except AttributeError as exc:
@@ -58,7 +57,7 @@ def handle_updates():
         if not imported:
             return
 
-        (check_for_updates, UpdateDialog, download_update, apply_update, backup_config_files) = imported
+        (check_for_updates, UpdateDialog, download_update, apply_update) = imported
 
         update_info = check_for_updates()
         if not update_info or not update_info.get("update_available"):
@@ -68,10 +67,6 @@ def handle_updates():
         result = dialog.show() or {}
         if result.get("choice") != "accept":
             return
-
-        backup_dir: Optional[str] = None
-        if result.get("backup_configs", True):
-            backup_dir = backup_config_files()
 
         download_url = update_info.get("download_url")
         if not download_url:
@@ -85,7 +80,7 @@ def handle_updates():
             return
 
         print("[Updater] Applying update...")
-        if apply_update(download_path, backup_dir=backup_dir):
+        if apply_update(download_path):
             print("[Updater] Update scheduled. Application will restart after this instance exits.")
             sys.exit(0)
 

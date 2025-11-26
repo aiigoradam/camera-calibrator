@@ -1,8 +1,5 @@
 #!/usr/bin/env python3
-"""
-Update notification dialog using tkinter.
-Includes option to backup config files (default: enabled).
-"""
+"""Update notification dialog using tkinter."""
 
 import tkinter as tk
 from tkinter import scrolledtext
@@ -12,7 +9,6 @@ class UpdateDialog:
     def __init__(self, update_info):
         self.update_info = update_info
         self.user_choice = None
-        self.backup_configs = True
         self._closed = False
 
         self.root = tk.Tk()
@@ -54,19 +50,6 @@ class UpdateDialog:
         )
         latest_label.pack(side=tk.LEFT, padx=20)
 
-        backup_frame = tk.Frame(self.root)
-        backup_frame.pack(fill=tk.X, padx=10, pady=5)
-
-        self.backup_var = tk.BooleanVar(value=True)
-        backup_checkbox = tk.Checkbutton(
-            backup_frame,
-            text="Backup configuration files before update",
-            variable=self.backup_var,
-            font=("Arial", 9),
-            command=self._on_backup_toggle,
-        )
-        backup_checkbox.pack(side=tk.LEFT)
-
         notes_label = tk.Label(self.root, text="Release Notes:", font=("Arial", 10, "bold"))
         notes_label.pack(anchor=tk.W, padx=10, pady=(10, 5))
 
@@ -95,17 +78,12 @@ class UpdateDialog:
         )
         accept_btn.pack(side=tk.RIGHT, padx=5)
 
-    def _on_backup_toggle(self):
-        """Update backup preference when checkbox is toggled."""
-        self.backup_configs = self.backup_var.get()
-
     def _on_accept(self):
         """User accepted the update."""
         if self._closed:
             return
         self._closed = True
         self.user_choice = "accept"
-        self.backup_configs = self.backup_var.get()
         self.root.quit()
         self.root.destroy()
 
@@ -115,11 +93,10 @@ class UpdateDialog:
             return
         self._closed = True
         self.user_choice = "reject"
-        self.backup_configs = self.backup_var.get()
         self.root.quit()
         self.root.destroy()
 
     def show(self):
-        """Show dialog and return user choice and backup preference."""
+        """Show dialog and return user choice."""
         self.root.mainloop()
-        return {"choice": self.user_choice, "backup_configs": self.backup_configs}
+        return {"choice": self.user_choice}
